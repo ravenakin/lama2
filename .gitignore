@@ -1,0 +1,11 @@
+call-activate.bat
+okteto.yml
+okteto-up.bat
+install-sw.sh
+install-sw1.sh
+start-sshd.sh
+pyproject.toml
+models
+.ruff_cache
+run-nodemon.sh
+app-.py
