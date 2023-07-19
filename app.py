@@ -385,7 +385,7 @@ with gr.Blocks(
             "biased, or otherwise offensive outputs.",
             elem_classes=["disclaimer"],
         )
-    _ = """
+    # _ = """
     msg.submit(
         # fn=conversation.user_turn,
         fn=predict,
@@ -403,10 +403,11 @@ with gr.Blocks(
         show_progress="full",
     )
     # """
+
+    _ = """
     msg.submit(
         # fn=conversation.user_turn,
-        # fn=predict_str,
-        fn=predict,
+        fn=predict_str,
         inputs=[msg, chatbot],
         outputs=[msg, chatbot],
         queue=True,
@@ -414,13 +415,13 @@ with gr.Blocks(
         api_name="predict",
     ).then(bot_str, chatbot, chatbot)
     submit.click(
-        # fn=lambda x, y: ("",) + predict_str(x, y)[1:],  # clear msg
-        fn=lambda x, y: ("",) + predict(x, y)[1:],  # clear msg
+        fn=lambda x, y: ("",) + predict_str(x, y)[1:],  # clear msg
         inputs=[msg, chatbot],
         outputs=[msg, chatbot],
         queue=True,
         show_progress="full",
     ).then(bot_str, chatbot, chatbot)
+    # """
 
     clear.click(lambda: None, None, chatbot, queue=False)
 
