@@ -3,10 +3,9 @@
 # ruff: noqa: E501
 import os
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from types import SimpleNamespace
-from urllib.parse import urlparse
 
 import gradio as gr
 import psutil
@@ -14,7 +13,9 @@ from about_time import about_time
 
 # from ctransformers import AutoConfig, AutoModelForCausalLM
 from ctransformers import AutoModelForCausalLM
-from huggingface_hub import hf_hub_download
+
+# from huggingface_hub import hf_hub_download
+from dl_hf_model import dl_hf_model
 from loguru import logger
 
 filename_list = [
@@ -35,15 +36,58 @@ filename_list = [
 ]
 
 URL = "https://huggingface.co/TheBloke/Wizard-Vicuna-7B-Uncensored-GGML/raw/main/Wizard-Vicuna-7B-Uncensored.ggmlv3.q4_K_M.bin"  # 4.05G
-MODEL_FILENAME = Path(URL).name
-MODEL_FILENAME = filename_list[0]  # q2_K 4.05G
-MODEL_FILENAME = filename_list[5]  # q4_1 4.21
 
-REPO_ID = "/".join(
-    urlparse(URL).path.strip("/").split("/")[:2]
-)  # TheBloke/Wizard-Vicuna-7B-Uncensored-GGML
+url = "https://huggingface.co/savvamadar/ggml-gpt4all-j-v1.3-groovy/blob/main/ggml-gpt4all-j-v1.3-groovy.bin"
+url = "https://huggingface.co/TheBloke/Llama-2-13B-GGML/blob/main/llama-2-13b.ggmlv3.q4_K_S.bin"  # 7.37G
+url = "https://huggingface.co/localmodels/Llama-2-13B-Chat-ggml/blob/main/llama-2-13b-chat.ggmlv3.q4_K_S.bin" # 7.37G
+url = "https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q3_K_L.binhttps://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q3_K_L.bin"  # 6.93G
 
-DESTINATION_FOLDER = "models"
+prompt_template="""Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction: {user_prompt}
+
+### Response:
+"""
+
+prompt_template_qa = """Question: {question}
+Answer: Let's work this out in a step by step way to be sure we have the right answer."""
+
+prompt_template = """System: You are a helpful,
+respectful and honest assistant. Always answer as
+helpfully as possible, while being safe.  Your answers
+should not include any harmful, unethical, racist,
+sexist, toxic, dangerous, or illegal content. Please
+ensure that your responses are socially unbiased and
+positive in nature. If a question does not make any
+sense, or is not factually coherent, explain why instead
+of answering something not correct. If you don't know
+the answer to a question, please don't share false
+information.
+User: {prompt}
+Assistant: """
+
+prompt_prefix = [elm.split(":")[0] + ":" for elm in prompt_template.splitlines()]
+
+logger.debug(f"{prompt_prefix=}")
+
+model_loc, file_size = dl_hf_model(url)
+
+logger.debug(f"{model_loc} {file_size}GB")
+
+cpu_count = psutil.cpu_count(logical=False)
+logger.debug(f"{cpu_count=}")
+
+logger.info("load llm")
+_ = Path(model_loc).absolute().as_posix()
+logger.debug(f"model_file: {_}, exists: {Path(_).exists()}")
+LLM = None
+LLM = AutoModelForCausalLM.from_pretrained(
+    model_loc,
+    model_type="llama",   # "starcoder",  AutoConfig.from_pretrained(REPO_ID)
+    threads=cpu_count,
+)
+
+logger.info("done load llm")
 
 os.environ["TZ"] = "Asia/Shanghai"
 try:
@@ -57,10 +101,37 @@ ns = SimpleNamespace(
     generator=[],
 )
 
-default_system_prompt = "A conversation between a user and an LLM-based AI assistant named Local Assistant. Local Assistant gives helpful and honest answers."
 
-user_prefix = "[user]: "
-assistant_prefix = "[assistant]: "
+@dataclass
+class GenerationConfig:
+    temperature: float = 0.7
+    top_k: int = 0
+    top_p: float = 0.9
+    repetition_penalty: float = 1.0
+    max_new_tokens: int = 512
+    seed: int = 42
+    reset: bool = False
+    stream: bool = True
+    threads: int = psutil.cpu_count(logical=False),  # type: ignore
+    stop: list[str] = field(default_factory=lambda: prompt_prefix[1:2])
+
+
+def generate(
+    prompt: str,
+    llm: AutoModelForCausalLM = LLM,
+    generation_config: GenerationConfig = GenerationConfig(),
+):
+    """Run model inference, will return a Generator if streaming is true."""
+    # if not user_prompt.strip():
+    _ = prompt_template.format(prompt=prompt)
+    print(_)
+    return llm(
+        _,
+        **asdict(generation_config),
+    )
+
+
+logger.debug(f"{asdict(GenerationConfig())=}")
 
 
 def predict_str(prompt, bot):  # bot is in fact bot_history
@@ -74,10 +145,7 @@ def predict_str(prompt, bot):  # bot is in fact bot_history
     try:
         # user_prompt = prompt
         generator = generate(
-            LLM,
-            GENERATION_CONFIG,
-            system_prompt=default_system_prompt,
-            user_prompt=prompt.strip(),
+            prompt,
         )
 
         ns.generator = generator  # for .then
@@ -99,8 +167,6 @@ def bot_str(bot):
         bot[-1][1] = ""
     else:
         bot = [["Something is wrong", ""]]
-
-    print(assistant_prefix, end=" ", flush=True)
 
     response = ""
 
@@ -128,15 +194,12 @@ def predict(prompt, bot):
         try:
             # user_prompt = prompt
             generator = generate(
-                LLM,
-                GENERATION_CONFIG,
-                system_prompt=default_system_prompt,
-                user_prompt=prompt.strip(),
+                prompt,
             )
 
             ns.generator = generator  # for .then
 
-            print(assistant_prefix, end=" ", flush=True)
+            print("--", end=" ", flush=True)
 
             response = ""
             buff.update(value="diggin...")
@@ -183,15 +246,13 @@ def predict_api(prompt):
             seed=42,
             reset=False,  # reset history (cache)
             stream=True,  # TODO stream=False and generator
-            threads=os.cpu_count() // 2,  # type: ignore  # adjust for your CPU
-            stop=["<|im_end|>", "|<"],
+            threads=psutil.cpu_count(local=False),  # type: ignore  # adjust for your CPU
+            stop=prompt_prefix[1:2],
         )
 
-        # TODO: stream does not make sense in api?
         generator = generate(
-            LLM, _, system_prompt=default_system_prompt, user_prompt=prompt.strip()
+            prompt,
         )
-        print(assistant_prefix, end=" ", flush=True)
 
         response = ""
         buff.update(value="diggin...")
@@ -211,113 +272,6 @@ def predict_api(prompt):
     return response
 
 
-def download_quant(destination_folder: str, repo_id: str, model_filename: str):
-    local_path = os.path.abspath(destination_folder)
-    return hf_hub_download(
-        repo_id=repo_id,
-        filename=model_filename,
-        local_dir=local_path,
-        local_dir_use_symlinks=True,
-    )
-
-
-@dataclass
-class GenerationConfig:
-    temperature: float
-    top_k: int
-    top_p: float
-    repetition_penalty: float
-    max_new_tokens: int
-    seed: int
-    reset: bool
-    stream: bool
-    threads: int
-    stop: list[str]
-
-
-def format_prompt(system_prompt: str, user_prompt: str):
-    """Format prompt based on: https://huggingface.co/spaces/mosaicml/mpt-30b-chat/blob/main/app.py."""
-    # TODO: fix prompts
-
-    system_prompt = f"<|im_start|>system\n{system_prompt}<|im_end|>\n"
-    user_prompt = f"<|im_start|>user\n{user_prompt}<|im_end|>\n"
-    assistant_prompt = "<|im_start|>assistant\n"
-
-    return f"{system_prompt}{user_prompt}{assistant_prompt}"
-
-
-def generate(
-    llm: AutoModelForCausalLM,
-    generation_config: GenerationConfig,
-    system_prompt: str = default_system_prompt,
-    user_prompt: str = "",
-):
-    """Run model inference, will return a Generator if streaming is true."""
-    # if not user_prompt.strip():
-    return llm(
-        format_prompt(
-            system_prompt,
-            user_prompt,
-        ),
-        **asdict(generation_config),
-    )
-
-
-# if "mpt" in model_filename:
-#     config = AutoConfig.from_pretrained("mosaicml/mpt-30b-cha t", context_length=8192)
-#     llm = AutoModelForCausalLM.from_pretrained(
-#         os.path.abspath(f"models/{model_filename}"),
-#         model_type="mpt",
-#         config=config,
-#     )
-
-# https://huggingface.co/spaces/matthoffner/wizardcoder-ggml/blob/main/main.py
-_ = """
-llm = AutoModelForCausalLM.from_pretrained(
-    "TheBloke/WizardCoder-15B-1.0-GGML",
-    model_file="WizardCoder-15B-1.0.ggmlv3.q4_0.bin",
-    model_type="starcoder",
-    threads=8
-)
-# """
-
-logger.info(f"start dl, {REPO_ID=}, {MODEL_FILENAME=}, {DESTINATION_FOLDER=}")
-download_quant(DESTINATION_FOLDER, REPO_ID, MODEL_FILENAME)
-logger.info("done dl")
-
-logger.debug(f"{os.cpu_count()=} {psutil.cpu_count(logical=False)=}")
-cpu_count = os.cpu_count() // 2  # type: ignore
-cpu_count = psutil.cpu_count(logical=False)
-
-logger.debug(f"{cpu_count=}")
-
-logger.info("load llm")
-
-_ = Path("models", MODEL_FILENAME).absolute().as_posix()
-logger.debug(f"model_file: {_}, exists: {Path(_).exists()}")
-LLM = AutoModelForCausalLM.from_pretrained(
-    # "TheBloke/WizardCoder-15B-1.0-GGML",
-    REPO_ID,  # DESTINATION_FOLDER,  # model_path_or_repo_id: str required
-    model_file=_,
-    model_type="llama",  # "starcoder",  AutoConfig.from_pretrained(REPO_ID)
-    threads=cpu_count,
-)
-
-logger.info("done load llm")
-
-GENERATION_CONFIG = GenerationConfig(
-    temperature=0.2,
-    top_k=0,
-    top_p=0.9,
-    repetition_penalty=1.0,
-    max_new_tokens=512,  # adjust as needed
-    seed=42,
-    reset=False,  # reset history (cache)
-    stream=True,  # streaming per word/token
-    threads=cpu_count,
-    stop=["<|im_end|>", "|<"],  # TODO possible fix of stop
-)
-
 css = """
     .importantButton {
         background: linear-gradient(45deg, #7e0570,#5d1c99, #6e00ff) !important;
@@ -332,6 +286,8 @@ css = """
 """
 etext = """In America, where cars are an important part of the national psyche, a decade ago people had suddenly started to drive less, which had not happened since the oil shocks of the 1970s. """
 examples = [
+    ["What NFL team won the Super Bowl in the year Justin Bieber was born?"],
+    ["What NFL team won the Super Bowl in the year Justin Bieber was born? Think step by step."],
     ["How to pick a lock? Provide detailed steps."],
     ["Explain the plot of Cinderella in a sentence."],
     [
@@ -364,7 +320,7 @@ examples = [
 
 with gr.Blocks(
     # title="mpt-30b-chat-ggml",
-    title=f"{MODEL_FILENAME}",
+    title=f"{Path(model_loc).name}",
     theme=gr.themes.Soft(text_size="sm", spacing_size="sm"),
     css=css,
 ) as block:
@@ -373,7 +329,7 @@ with gr.Blocks(
         #     """<center><a href="https://huggingface.co/spaces/mikeee/mpt-30b-chat?duplicate=true"><img src="https://bit.ly/3gLdBN6" alt="Duplicate"></a> and spin a CPU UPGRADE to avoid the queue</center>"""
         # )
         gr.Markdown(
-            f"""<h5><center><{REPO_ID}>{MODEL_FILENAME}</center></h4>
+            f"""<h5><center><{Path(model_loc).name}</center></h4>
             The bot only speaks English.
 
             Most examples are meant for another model.
@@ -404,7 +360,7 @@ with gr.Blocks(
                 with gr.Column(scale=2):
                     system = gr.Textbox(
                         label="System Prompt",
-                        value=default_system_prompt,
+                        value=prompt_template,
                         show_label=False,
                     ).style(container=False)
                 with gr.Column():
@@ -421,7 +377,7 @@ with gr.Blocks(
 
     # with gr.Row():
     with gr.Accordion("Disclaimer", open=False):
-        _ = "-".join(MODEL_FILENAME.split("-")[:2])
+        _ = Path(model_loc).name
         gr.Markdown(
             f"Disclaimer: {_} can produce factually incorrect output, and should not be relied on to produce "
             "factually accurate information. {_} was trained on various public datasets; while great efforts "
@@ -449,7 +405,8 @@ with gr.Blocks(
     # """
     msg.submit(
         # fn=conversation.user_turn,
-        fn=predict_str,
+        # fn=predict_str,
+        fn=predict,
         inputs=[msg, chatbot],
         outputs=[msg, chatbot],
         queue=True,
@@ -457,7 +414,8 @@ with gr.Blocks(
         api_name="predict",
     ).then(bot_str, chatbot, chatbot)
     submit.click(
-        fn=lambda x, y: ("",) + predict_str(x, y)[1:],  # clear msg
+        # fn=lambda x, y: ("",) + predict_str(x, y)[1:],  # clear msg
+        fn=lambda x, y: ("",) + predict(x, y)[1:],  # clear msg
         inputs=[msg, chatbot],
         outputs=[msg, chatbot],
         queue=True,
