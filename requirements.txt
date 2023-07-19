@@ -3,6 +3,6 @@ transformers  # ==4.30.2
 # huggingface_hub
 gradio
 loguru
-# about-time
+about-time
 psutil
 dl-hf-model
