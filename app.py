@@ -68,11 +68,11 @@ Assistant: """
 
 stop_string = [elm.split(":")[0] + ":" for elm in prompt_template.splitlines()][-2]
 
-logger.debug(f"{stop_string=}")
-
 model_loc, file_size = dl_hf_model(url)
 
 logger.debug(f"{model_loc} {file_size}GB")
+
+logger.debug(f"{stop_string=}")
 
 _ = psutil.cpu_count(logical=False)
 cpu_count: int = int(_) if _ else 1
