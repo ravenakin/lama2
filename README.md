@@ -1,5 +1,5 @@
 ---
-title: TheBloke/WizardLM-13B-V1.0-Uncensored-GGML
+title: llama-2-13b-ggml
 emoji: 🚀
 colorFrom: green
 colorTo: green

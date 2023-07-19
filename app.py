@@ -74,7 +74,8 @@ model_loc, file_size = dl_hf_model(url)
 
 logger.debug(f"{model_loc} {file_size}GB")
 
-cpu_count = psutil.cpu_count(logical=False)
+_ = psutil.cpu_count(logical=False)
+cpu_count: int = int(_) if _ else 1
 logger.debug(f"{cpu_count=}")
 
 logger.info("load llm")
@@ -112,7 +113,7 @@ class GenerationConfig:
     seed: int = 42
     reset: bool = False
     stream: bool = True
-    threads: int = psutil.cpu_count(logical=False),  # type: ignore
+    threads: int = cpu_count
     stop: list[str] = field(default_factory=lambda: prompt_prefix[1:2])
 
 
@@ -246,7 +247,7 @@ def predict_api(prompt):
             seed=42,
             reset=False,  # reset history (cache)
             stream=True,  # TODO stream=False and generator
-            threads=psutil.cpu_count(local=False),  # type: ignore  # adjust for your CPU
+            threads=cpu_count,
             stop=prompt_prefix[1:2],
         )
 
