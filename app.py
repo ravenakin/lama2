@@ -106,7 +106,7 @@ ns = SimpleNamespace(
 @dataclass
 class GenerationConfig:
     temperature: float = 0.7
-    top_k: int = 0
+    top_k: int = 50
     top_p: float = 0.9
     repetition_penalty: float = 1.0
     max_new_tokens: int = 512
