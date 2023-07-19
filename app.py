@@ -66,9 +66,9 @@ information.
 User: {prompt}
 Assistant: """
 
-prompt_prefix = [elm.split(":")[0] + ":" for elm in prompt_template.splitlines()]
+stop_string = [elm.split(":")[0] + ":" for elm in prompt_template.splitlines()][-2]
 
-logger.debug(f"{prompt_prefix=}")
+logger.debug(f"{stop_string=}")
 
 model_loc, file_size = dl_hf_model(url)
 
@@ -114,7 +114,7 @@ class GenerationConfig:
     reset: bool = False
     stream: bool = True
     threads: int = cpu_count
-    stop: list[str] = field(default_factory=lambda: prompt_prefix[1:2])
+    stop: list[str] = field(default_factory=lambda: [stop_string])
 
 
 def generate(
