@@ -4,9 +4,9 @@ emoji: 🚀
 colorFrom: green
 colorTo: green
 sdk: gradio
-sdk_version: 3.35.2
+sdk_version: 3.37.0
 app_file: app.py
-pinned: false
+pinned: true
 duplicated_from: mikeee/Wizard-Vicuna-7B-Uncensored-GGML
 ---
 
