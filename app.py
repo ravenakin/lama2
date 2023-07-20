@@ -351,12 +351,11 @@ with gr.Blocks(
         #     """<center><a href="https://huggingface.co/spaces/mikeee/mpt-30b-chat?duplicate=true"><img src="https://bit.ly/3gLdBN6" alt="Duplicate"></a> and spin a CPU UPGRADE to avoid the queue</center>"""
         # )
         gr.Markdown(
-            dedent(f"""<h5><center>{Path(model_loc).name}</center></h4>
-
+            f"""<h5><center>{Path(model_loc).name}</center></h4>
             Most examples are meant for another model.
             You probably should try to test
             some related prompts. For example:\n
-            {prompt_template}"""),
+            {prompt_template}""",
             elem_classes="xsmall",
         )
 
