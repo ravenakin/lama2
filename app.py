@@ -6,7 +6,6 @@ import platform
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from textwrap import dedent
 from types import SimpleNamespace
 
 import gradio as gr
@@ -307,6 +306,7 @@ css = """
 """
 etext = """In America, where cars are an important part of the national psyche, a decade ago people had suddenly started to drive less, which had not happened since the oil shocks of the 1970s. """
 examples = [
+    ["Question: What NFL team won the Super Bowl in the year Justin Bieber was born?\n Answer: Let's work this out in a step by step way to be sure we have the right answer."],
     ["What NFL team won the Super Bowl in the year Justin Bieber was born?"],
     ["What NFL team won the Super Bowl in the year Justin Bieber was born? Think step by step."],
     ["How to pick a lock? Provide detailed steps."],
@@ -354,8 +354,11 @@ with gr.Blocks(
             f"""<h5><center>{Path(model_loc).name}</center></h4>
             Most examples are meant for another model.
             You probably should try to test
-            some related prompts. For example:\n
-            {prompt_template}""",
+            some related prompts. For example:
+
+            Question: {{question}}
+
+            Answer: Let's work this out in a step by step way to be sure we have the right answer.""",
             elem_classes="xsmall",
         )
 
