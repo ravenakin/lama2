@@ -129,11 +129,10 @@ def generate(
     generation_config: GenerationConfig = GenerationConfig(),
 ):
     """Run model inference, will return a Generator if streaming is true."""
-    # if not user_prompt.strip():
-    _ = prompt_template.format(question=question)
-    print(_)
+    # _ = prompt_template.format(question=question)
+    # print(_)
     return llm(
-        _,
+        question,
         **asdict(generation_config),
     )
 
@@ -341,8 +340,7 @@ with gr.Blocks(
         #     """<center><a href="https://huggingface.co/spaces/mikeee/mpt-30b-chat?duplicate=true"><img src="https://bit.ly/3gLdBN6" alt="Duplicate"></a> and spin a CPU UPGRADE to avoid the queue</center>"""
         # )
         gr.Markdown(
-            f"""<h5><center><{Path(model_loc).name}</center></h4>
-            The bot only speaks English.
+            f"""<h5><center>{Path(model_loc).name}</center></h4>
 
             Most examples are meant for another model.
             You probably should try to test
