@@ -2,6 +2,7 @@
 # pylint: disable=line-too-long, broad-exception-caught, invalid-name, missing-function-docstring, too-many-instance-attributes, missing-class-docstring
 # ruff: noqa: E501
 import os
+import platform
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -39,8 +40,10 @@ URL = "https://huggingface.co/TheBloke/Wizard-Vicuna-7B-Uncensored-GGML/raw/main
 
 url = "https://huggingface.co/savvamadar/ggml-gpt4all-j-v1.3-groovy/blob/main/ggml-gpt4all-j-v1.3-groovy.bin"
 url = "https://huggingface.co/TheBloke/Llama-2-13B-GGML/blob/main/llama-2-13b.ggmlv3.q4_K_S.bin"  # 7.37G
-# url = "https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q3_K_L.binhttps://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q3_K_L.bin"  # 6.93G
+# url = "https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q3_K_L.bin"
+url = "https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q3_K_L.bin"  # 6.93G
 # url = "https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q3_K_L.binhttps://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q4_K_M.bin"  # 7.87G
+
 url = "https://huggingface.co/localmodels/Llama-2-13B-Chat-ggml/blob/main/llama-2-13b-chat.ggmlv3.q4_K_S.bin" # 7.37G
 
 prompt_template="""Below is an instruction that describes a task. Write a response that appropriately completes the request.
@@ -88,11 +91,20 @@ logger.info("load llm")
 _ = Path(model_loc).absolute().as_posix()
 logger.debug(f"model_file: {_}, exists: {Path(_).exists()}")
 LLM = None
-LLM = AutoModelForCausalLM.from_pretrained(
-    model_loc,
-    model_type="llama",
-    threads=cpu_count,
-)
+
+if "okteto" in platform.node():
+    # url = "https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q2_K.bin"
+    LLM = AutoModelForCausalLM.from_pretrained(
+        "models/llama-2-13b-chat.ggmlv3.q2_K.bin",
+        model_type="llama",
+        threads=cpu_count,
+    )
+else:
+    LLM = AutoModelForCausalLM.from_pretrained(
+        model_loc,
+        model_type="llama",
+        threads=cpu_count,
+    )
 
 logger.info("done load llm")
 
@@ -458,4 +470,8 @@ with gr.Blocks(
 
 # concurrency_count=5, max_size=20
 # max_size=36, concurrency_count=14
-block.queue(concurrency_count=5, max_size=20).launch(debug=True)
+# CPU cpu_count=2 16G, model 7G
+# CPU UPGRADE cpu_count=8 32G, model 7G
+
+concurrency_count = max(psutil.virtual_memory().total / 10**9 // file_size - 1, 1)
+block.queue(concurrency_count=concurrency_count, max_size=5).launch(debug=True)
