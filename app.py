@@ -221,7 +221,6 @@ def predict(prompt, bot):
             print("--", end=" ", flush=True)
 
             response = ""
-            buff.update(value="diggin...")
 
             flag = 1
             for word in generator:
@@ -275,12 +274,10 @@ def predict_api(prompt):
         )
 
         response = ""
-        buff.update(value="diggin...")
         for word in generator:
             print(word, end="", flush=True)
             response += word
             ns.response = response
-            buff.update(value=response)
         print("")
         logger.debug(f"{response=}")
     except Exception as exc:
@@ -372,7 +369,9 @@ with gr.Blocks(
                 label="Chat Message Box",
                 placeholder="Ask me anything (press Enter or click Submit to send)",
                 show_label=False,
-            ).style(container=False)
+                container=False,
+            # ).style(container=False)
+            )
         with gr.Column(scale=1, min_width=50):
             with gr.Row():
                 submit = gr.Button("Submit", elem_classes="xsmall")
@@ -381,11 +380,12 @@ with gr.Blocks(
     with gr.Row(visible=False):
         with gr.Accordion("Advanced Options:", open=False):
             with gr.Row():
-                with gr.Column(scale=2, container=False):
+                with gr.Column(scale=2):
                     system = gr.Textbox(
                         label="System Prompt",
                         value=prompt_template,
                         show_label=False,
+                        container=False,
                     # ).style(container=False)
                     )
                 with gr.Column():
@@ -475,8 +475,14 @@ with gr.Blocks(
 # CPU cpu_count=2 16G, model 7G
 # CPU UPGRADE cpu_count=8 32G, model 7G
 
-_ = int(psutil.virtual_memory().total / 10**9 // file_size - 1)
-concurrency_count = max(_, 1)
+# does not work
+# _ = int(psutil.virtual_memory().total / 10**9 // file_size - 1)
+# concurrency_count = max(_, 1)
+
+if psutil.cpu_count(logical=False) > 8:
+    concurrency_count = max(int(32 / file_size) - 1, 1)
+else:
+    concurrency_count = max(int(16 / file_size) - 1, 1)
 logger.info(f"{concurrency_count=}")
 
 block.queue(concurrency_count=concurrency_count, max_size=5).launch(debug=True)
