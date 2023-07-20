@@ -6,6 +6,7 @@ import platform
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from textwrap import dedent
 from types import SimpleNamespace
 
 import gradio as gr
@@ -352,12 +353,12 @@ with gr.Blocks(
         #     """<center><a href="https://huggingface.co/spaces/mikeee/mpt-30b-chat?duplicate=true"><img src="https://bit.ly/3gLdBN6" alt="Duplicate"></a> and spin a CPU UPGRADE to avoid the queue</center>"""
         # )
         gr.Markdown(
-            f"""<h5><center>{Path(model_loc).name}</center></h4>
+            dedent(f"""<h5><center>{Path(model_loc).name}</center></h4>
 
             Most examples are meant for another model.
             You probably should try to test
-            some related prompts.
-            """,
+            some related prompts. For example:\n
+            {prompt_template}"""),
             elem_classes="xsmall",
         )
 
