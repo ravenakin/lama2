@@ -474,4 +474,6 @@ with gr.Blocks(
 # CPU UPGRADE cpu_count=8 32G, model 7G
 
 concurrency_count = max(psutil.virtual_memory().total / 10**9 // file_size - 1, 1)
+logger.info(f"{concurrency_count=}")
+
 block.queue(concurrency_count=concurrency_count, max_size=5).launch(debug=True)
