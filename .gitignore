@@ -9,3 +9,4 @@ models
 .ruff_cache
 run-nodemon.sh
 app-.py
+nodemon.json

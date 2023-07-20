@@ -3,7 +3,7 @@
 # ruff: noqa: E501
 import os
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -39,9 +39,9 @@ URL = "https://huggingface.co/TheBloke/Wizard-Vicuna-7B-Uncensored-GGML/raw/main
 
 url = "https://huggingface.co/savvamadar/ggml-gpt4all-j-v1.3-groovy/blob/main/ggml-gpt4all-j-v1.3-groovy.bin"
 url = "https://huggingface.co/TheBloke/Llama-2-13B-GGML/blob/main/llama-2-13b.ggmlv3.q4_K_S.bin"  # 7.37G
+# url = "https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q3_K_L.binhttps://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q3_K_L.bin"  # 6.93G
+# url = "https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q3_K_L.binhttps://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q4_K_M.bin"  # 7.87G
 url = "https://huggingface.co/localmodels/Llama-2-13B-Chat-ggml/blob/main/llama-2-13b-chat.ggmlv3.q4_K_S.bin" # 7.37G
-url = "https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q3_K_L.binhttps://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q3_K_L.bin"  # 6.93G
-url = "https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q3_K_L.binhttps://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q4_K_M.bin"  #
 
 prompt_template="""Below is an instruction that describes a task. Write a response that appropriately completes the request.
 
@@ -49,9 +49,6 @@ prompt_template="""Below is an instruction that describes a task. Write a respon
 
 ### Response:
 """
-
-prompt_template_qa = """Question: {question}
-Answer: Let's work this out in a step by step way to be sure we have the right answer."""
 
 prompt_template = """System: You are a helpful,
 respectful and honest assistant. Always answer as
@@ -67,9 +64,17 @@ information.
 User: {prompt}
 Assistant: """
 
-stop_string = [elm.split(":")[0] + ":" for elm in prompt_template.splitlines()][-2]
+prompt_template = """Question: {question}
+Answer: Let's work this out in a step by step way to be sure we have the right answer."""
 
-model_loc, file_size = dl_hf_model(url)
+_ = [elm for elm in prompt_template.splitlines() if elm.strip()]
+stop_string = [elm.split(":")[0] + ":" for elm in _][-2]
+
+try:
+    model_loc, file_size = dl_hf_model(url)
+except Exception as exc_:
+    logger.error(exc_)
+    raise SystemExit(1) from exc_
 
 logger.debug(f"{model_loc} {file_size}GB")
 
@@ -85,7 +90,7 @@ logger.debug(f"model_file: {_}, exists: {Path(_).exists()}")
 LLM = None
 LLM = AutoModelForCausalLM.from_pretrained(
     model_loc,
-    model_type="llama",   # "starcoder",  AutoConfig.from_pretrained(REPO_ID)
+    model_type="llama",
     threads=cpu_count,
 )
 
@@ -100,7 +105,7 @@ except Exception:
 
 ns = SimpleNamespace(
     response="",
-    generator=[],
+    generator=(_ for _ in []),
 )
 
 
@@ -115,17 +120,17 @@ class GenerationConfig:
     reset: bool = False
     stream: bool = True
     threads: int = cpu_count
-    stop: list[str] = field(default_factory=lambda: [stop_string])
+    # stop: list[str] = field(default_factory=lambda: [stop_string])
 
 
 def generate(
-    prompt: str,
-    llm: AutoModelForCausalLM = LLM,
+    question: str,
+    llm=LLM,
     generation_config: GenerationConfig = GenerationConfig(),
 ):
     """Run model inference, will return a Generator if streaming is true."""
     # if not user_prompt.strip():
-    _ = prompt_template.format(prompt=prompt)
+    _ = prompt_template.format(question=question)
     print(_)
     return llm(
         _,
@@ -210,13 +215,13 @@ def predict(prompt, bot):
             for word in generator:
                 # record first response time
                 if flag:
-                    logger.debug(f"\t {time.time() - then:.1f}s")
+                    fisrt_arr = f"{time.time() - then:.1f}s"
+                    logger.debug(f"\t 1st arrival: {fisrt_arr}")
                     flag = 0
-                # print(word, end="", flush=True)
-                print(word, flush=True)  # vertical stream
+                print(word, end="", flush=True)
+                # print(word, flush=True)  # vertical stream
                 response += word
-                ns.response = response
-                buff.update(value=response)
+                ns.response = f"({fisrt_arr}){response}"
             print("")
             logger.debug(f"{response=}")
         except Exception as exc:
@@ -229,7 +234,7 @@ def predict(prompt, bot):
         f"{atime.duration/(len(prompt) + len(response)):.1f}s/char)"  # type: ignore
     )
 
-    bot.append([prompt, f"{response} {_}"])
+    bot.append([prompt, f"{response} \n{_}"])
 
     return prompt, bot
 
@@ -247,9 +252,9 @@ def predict_api(prompt):
             max_new_tokens=512,  # adjust as needed
             seed=42,
             reset=False,  # reset history (cache)
-            stream=True,  # TODO stream=False and generator
+            stream=True,
             threads=cpu_count,
-            stop=prompt_prefix[1:2],
+            # stop=prompt_prefix[1:2],
         )
 
         generator = generate(
@@ -272,6 +277,10 @@ def predict_api(prompt):
     # bot = [(prompt, response)]
 
     return response
+
+
+def update_buff():
+    return ns.response
 
 
 css = """
@@ -320,8 +329,9 @@ examples = [
     ["Erkläre die Handlung von Cinderella in einem Satz. Auf Deutsch"],
 ]
 
+logger.info("start block")
+
 with gr.Blocks(
-    # title="mpt-30b-chat-ggml",
     title=f"{Path(model_loc).name}",
     theme=gr.themes.Soft(text_size="sm", spacing_size="sm"),
     css=css,
@@ -343,7 +353,7 @@ with gr.Blocks(
 
     # chatbot = gr.Chatbot().style(height=700)  # 500
     chatbot = gr.Chatbot(height=500)
-    buff = gr.Textbox(show_label=False, visible=False)
+    buff = gr.Textbox(show_label=False, visible=True)
     with gr.Row():
         with gr.Column(scale=5):
             msg = gr.Textbox(
@@ -359,12 +369,13 @@ with gr.Blocks(
     with gr.Row(visible=False):
         with gr.Accordion("Advanced Options:", open=False):
             with gr.Row():
-                with gr.Column(scale=2):
+                with gr.Column(scale=2, container=False):
                     system = gr.Textbox(
                         label="System Prompt",
                         value=prompt_template,
                         show_label=False,
-                    ).style(container=False)
+                    # ).style(container=False)
+                    )
                 with gr.Column():
                     with gr.Row():
                         change = gr.Button("Change System Prompt")
@@ -444,6 +455,8 @@ with gr.Blocks(
         # show_progress="full",
         api_name="api",
     )
+
+    block.load(update_buff, [], buff, every=1)
 
 # concurrency_count=5, max_size=20
 # max_size=36, concurrency_count=14
