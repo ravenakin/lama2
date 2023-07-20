@@ -246,6 +246,7 @@ def predict(prompt, bot):
         f"{atime.duration/(len(prompt) + len(response)):.1f}s/char)"  # type: ignore
     )
 
+    ns.response = ""
     bot.append([prompt, f"{response} \n{_}"])
 
     return prompt, bot
