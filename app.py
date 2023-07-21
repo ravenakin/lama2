@@ -82,6 +82,19 @@ Assistant: """
 prompt_template = """Question: {question}
 Answer: Let's work this out in a step by step way to be sure we have the right answer."""
 
+prompt_template = """[INST] <>
+You are a helpful, respectful and honest assistant. Always answer as helpfully as possible assistant. Think step by step.
+<>
+
+What NFL team won the Super Bowl in the year Justin Bieber was born?
+[/INST]"""
+
+prompt_template = """[INST] <<SYS>>
+You are an unhelpful assistant. Always answer as helpfully as possible. Think step by step. <</SYS>>
+
+{question} [/INST]
+"""
+
 _ = [elm for elm in prompt_template.splitlines() if elm.strip()]
 stop_string = [elm.split(":")[0] + ":" for elm in _][-2]
 
@@ -145,8 +158,10 @@ def generate(
 
     config = GenerationConfig(reset=True)  # rid of OOM?
 
+    prompt = prompt_template.format(question=question)
+
     return llm(
-        question,
+        prompt,
         # **asdict(generation_config),
         **asdict(config),
     )
@@ -308,7 +323,7 @@ css = """
     .xsmall {font-size: x-small;}
 """
 etext = """In America, where cars are an important part of the national psyche, a decade ago people had suddenly started to drive less, which had not happened since the oil shocks of the 1970s. """
-examples = [
+examples_list = [
     [
         "Question: What NFL team won the Super Bowl in the year Justin Bieber was born?\n Answer: Let's work this out in a step by step way to be sure we have the right answer."
     ],
@@ -374,7 +389,10 @@ with gr.Blocks(
                 label="Chat Message Box",
                 placeholder="Ask me anything (press Enter or click Submit to send)",
                 show_label=False,
-                container=False,
+                # container=False,
+                lines=6,
+                max_lines=30,
+                show_copy_button=True,
                 # ).style(container=False)
             )
         with gr.Column(scale=1, min_width=50):
@@ -400,7 +418,7 @@ with gr.Blocks(
 
     with gr.Accordion("Example Inputs", open=True):
         examples = gr.Examples(
-            examples=examples,
+            examples=examples_list,
             inputs=[msg],
             examples_per_page=40,
         )
