@@ -3,6 +3,7 @@
 # ruff: noqa: E501
 import os
 import platform
+import random
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -108,9 +109,9 @@ LLM = None
 
 try:
     model_loc, file_size = dl_hf_model(url)
-except Exception as exc:
-    logger.erorr(exc)
-    raise SystemExit(1) from exc
+except Exception as exc_:
+    logger.error(exc_)
+    raise SystemExit(1) from exc_
 
 LLM = AutoModelForCausalLM.from_pretrained(
     model_loc,
@@ -150,19 +151,16 @@ class GenerationConfig:
 def generate(
     question: str,
     llm=LLM,
-    generation_config: GenerationConfig = GenerationConfig(),
+    config: GenerationConfig = GenerationConfig(),
 ):
     """Run model inference, will return a Generator if streaming is true."""
     # _ = prompt_template.format(question=question)
     # print(_)
 
-    config = GenerationConfig(reset=True)  # rid of OOM?
-
     prompt = prompt_template.format(question=question)
 
     return llm(
         prompt,
-        # **asdict(generation_config),
         **asdict(config),
     )
 
@@ -170,107 +168,64 @@ def generate(
 logger.debug(f"{asdict(GenerationConfig())=}")
 
 
-def predict_str(prompt, bot):  # bot is in fact bot_history
-    # logger.debug(f"{prompt=}, {bot=}, {timeout=}")
-
-    if bot is None:
-        bot = []
-
-    logger.debug(f"{prompt=}, {bot=}")
-
-    try:
-        # user_prompt = prompt
-        generator = generate(
-            prompt,
-        )
-
-        ns.generator = generator  # for .then
-
-    except Exception as exc:
-        logger.error(exc)
-
-    # bot.append([prompt, f"{response} {_}"])
-    # return prompt, bot
-
-    _ = bot + [[prompt, None]]
-    logger.debug(f"{prompt=}, {_=}")
-
-    return prompt, _
+def user(user_message, history):
+    # return user_message, history + [[user_message, None]]
+    history.append([user_message, None])
+    return user_message, history
 
 
-def bot_str(bot):
-    if bot:
-        bot[-1][1] = ""
-    else:
-        bot = [["Something is wrong", ""]]
+def bot_(history):
+    user_message = history[-1][0]
+    resp = random.choice(["How are you?", "I love you", "I'm very hungry"])
+    bot_message = user_message + ": " + resp
+    history[-1][1] = ""
+    for character in bot_message:
+        history[-1][1] += character
+        ns.buff = history[-1][1]
+        time.sleep(0.02)
+        yield history
 
-    response = ""
-
-    flag = 1
-    then = time.time()
-    for word in ns.generator:
-        # record first response time
-        if flag:
-            logger.debug(f"\t {time.time() - then:.1f}s")
-            flag = 0
-        print(word, end="", flush=True)
-        # print(word, flush=True)  # vertical stream
-        response += word
-        bot[-1][1] = response
-        yield bot
+    history[-1][1] = resp
+    yield history
 
 
-def predict(prompt, bot):
-    # logger.debug(f"{prompt=}, {bot=}, {timeout=}")
-    logger.debug(f"{prompt=}, {bot=}")
+def bot(history):
+    user_message = history[-1][0]
+    response = []
 
-    ns.response = ""
-    then = time.time()
+    logger.debug(f"{user_message=}")
+
     with about_time() as atime:  # type: ignore
-        try:
-            # user_prompt = prompt
-            generator = generate(
-                prompt,
-            )
+        flag = 1
+        prefix = ""
+        then = time.time()
 
-            ns.generator = generator  # for .then
+        logger.debug("about to generate")
 
-            print("--", end=" ", flush=True)
+        config = GenerationConfig(reset=True)
+        for elm in generate(user_message, config=config):
+            if flag == 1:
+                logger.debug("in the loop")
+                prefix = f"({time.time() - then:.2f}s) "
+                flag = 0
+                print(prefix, end="", flush=True)
+            print(elm, end="", flush=True)
 
-            response = ""
+            response.append(elm)
+            history[-1][1] = prefix + "".join(response)
+            yield history
 
-            flag = 1
-            for word in generator:
-                # record first response time
-                if flag:
-                    fisrt_arr = f"{time.time() - then:.1f}s"
-                    logger.debug(f"\t 1st arrival: {fisrt_arr}")
-                    flag = 0
-                print(word, end="", flush=True)
-                # print(word, flush=True)  # vertical stream
-                response += word
-                ns.response = f"({fisrt_arr}){response}"
-            print("")
-            logger.debug(f"{response=}")
-        except Exception as exc:
-            logger.error(exc)
-            response = f"{exc=}"
-
-    # bot = {"inputs": [response]}
     _ = (
         f"(time elapsed: {atime.duration_human}, "  # type: ignore
-        f"{atime.duration/(len(prompt) + len(response)):.1f}s/char)"  # type: ignore
+        f"{atime.duration/len(''.join(response)):.1f}s/char)"  # type: ignore
     )
 
-    ns.response = ""
-    bot.append([prompt, f"{response} \n{_}"])
-
-    return prompt, bot
+    history[-1][1] = "".join(response)
+    yield history
 
 
 def predict_api(prompt):
     logger.debug(f"{prompt=}")
-    ns.response = ""
     try:
         # user_prompt = prompt
         _ = GenerationConfig(
@@ -280,8 +235,8 @@ def predict_api(prompt):
             repetition_penalty=1.0,
             max_new_tokens=512,  # adjust as needed
             seed=42,
-            reset=False,  # reset history (cache)
-            stream=True,
+            reset=True,  # reset history (cache)
+            stream=False,
             threads=cpu_count,
             # stop=prompt_prefix[1:2],
         )
@@ -294,7 +249,6 @@ def predict_api(prompt):
         for word in generator:
             print(word, end="", flush=True)
             response += word
-            ns.response = response
         print("")
         logger.debug(f"{response=}")
     except Exception as exc:
@@ -304,10 +258,6 @@ def predict_api(prompt):
     # bot = [(prompt, response)]
 
     return response
-
-
-def update_buff():
-    return ns.response
 
 
 css = """
@@ -368,6 +318,7 @@ with gr.Blocks(
     theme=gr.themes.Soft(text_size="sm", spacing_size="sm"),
     css=css,
 ) as block:
+    # buff_var = gr.State("")
     with gr.Accordion("🎈 Info", open=False):
         # gr.HTML(
         #     """<center><a href="https://huggingface.co/spaces/mikeee/mpt-30b-chat?duplicate=true"><img src="https://bit.ly/3gLdBN6" alt="Duplicate"></a> and spin a CPU UPGRADE to avoid the queue</center>"""
@@ -382,7 +333,9 @@ with gr.Blocks(
 
     # chatbot = gr.Chatbot().style(height=700)  # 500
     chatbot = gr.Chatbot(height=500)
-    buff = gr.Textbox(show_label=False, visible=True)
+
+    # buff = gr.Textbox(show_label=False, visible=True)
+
     with gr.Row():
         with gr.Column(scale=5):
             msg = gr.Textbox(
@@ -433,51 +386,24 @@ with gr.Blocks(
             "biased, or otherwise offensive outputs.",
             elem_classes=["disclaimer"],
         )
-    # _ = """
+
     msg.submit(
         # fn=conversation.user_turn,
-        fn=predict,
+        fn=user,
         inputs=[msg, chatbot],
         outputs=[msg, chatbot],
         # queue=True,
         show_progress="full",
-        api_name="predict",
-    )
+    ).then(bot, chatbot, chatbot)
     submit.click(
-        fn=lambda x, y: ("",) + predict(x, y)[1:],  # clear msg
+        fn=lambda x, y: ("",) + user(x, y)[1:],  # clear msg
         inputs=[msg, chatbot],
         outputs=[msg, chatbot],
-        queue=True,
+        # queue=True,
         show_progress="full",
-    )
-    # """
-
-    _ = """
-    msg.submit(
-        # fn=conversation.user_turn,
-        fn=predict_str,
-        inputs=[msg, chatbot],
-        outputs=[msg, chatbot],
-        queue=True,
-        show_progress="full",
-        api_name="predict",
-    ).then(bot_str, chatbot, chatbot)
-    submit.click(
-        fn=lambda x, y: ("",) + predict_str(x, y)[1:],  # clear msg
-        inputs=[msg, chatbot],
-        outputs=[msg, chatbot],
-        queue=True,
-        show_progress="full",
-    ).then(bot_str, chatbot, chatbot)
-    # """
+    ).then(bot, chatbot, chatbot)
 
     clear.click(lambda: None, None, chatbot, queue=False)
-
-    # update buff Textbox, every: units in seconds)
-    # https://huggingface.co/spaces/julien-c/nvidia-smi/discussions
-    # does not work
-    # AttributeError: 'Blocks' object has no attribute 'run_forever'
-    # block.run_forever(lambda: ns.response, None, [buff], every=1)
 
     with gr.Accordion("For Chat/Translation API", open=False, visible=False):
         input_text = gr.Text()
@@ -491,7 +417,8 @@ with gr.Blocks(
         api_name="api",
     )
 
-    block.load(update_buff, [], buff, every=1)
+    # block.load(update_buff, [], buff, every=1)
+    # block.load(update_buff, [buff_var], [buff_var, buff], every=1)
 
 # concurrency_count=5, max_size=20
 # max_size=36, concurrency_count=14
