@@ -436,4 +436,4 @@ else:
     concurrency_count = max(int(16 / file_size) - 1, 1)
 logger.info(f"{concurrency_count=}")
 
-block.queue(concurrency_count=concurrency_count, max_size=5).launch(debug=True)
+block.queue(concurrency_count=1, max_size=5).launch(debug=True)
