@@ -142,9 +142,13 @@ def generate(
     """Run model inference, will return a Generator if streaming is true."""
     # _ = prompt_template.format(question=question)
     # print(_)
+
+    config = GenerationConfig(reset=True)  # rid of OOM?
+
     return llm(
         question,
-        **asdict(generation_config),
+        # **asdict(generation_config),
+        **asdict(config),
     )
 
 
@@ -357,11 +361,7 @@ with gr.Blocks(
             f"""<h5><center>{Path(model_loc).name}</center></h4>
             Most examples are meant for another model.
             You probably should try to test
-            some related prompts. For example:
-
-            Question: {{question}}
-
-            Answer: Let's work this out in a step by step way to be sure we have the right answer.""",
+            some related prompts.""",
             elem_classes="xsmall",
         )
 
