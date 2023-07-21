@@ -220,7 +220,7 @@ def bot(history):
         f"{atime.duration/len(''.join(response)):.1f}s/char)"  # type: ignore
     )
 
-    history[-1][1] = "".join(response)
+    history[-1][1] = "".join(response)  + f"\n{_}"
     yield history
 
 
