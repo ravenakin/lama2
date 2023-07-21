@@ -11,11 +11,7 @@ from types import SimpleNamespace
 import gradio as gr
 import psutil
 from about_time import about_time
-
-# from ctransformers import AutoConfig, AutoModelForCausalLM
 from ctransformers import AutoModelForCausalLM
-
-# from huggingface_hub import hf_hub_download
 from dl_hf_model import dl_hf_model
 from loguru import logger
 
@@ -44,9 +40,21 @@ url = "https://huggingface.co/TheBloke/Llama-2-13B-GGML/blob/main/llama-2-13b.gg
 url = "https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q3_K_L.bin"  # 6.93G
 # url = "https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q3_K_L.binhttps://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q4_K_M.bin"  # 7.87G
 
-url = "https://huggingface.co/localmodels/Llama-2-13B-Chat-ggml/blob/main/llama-2-13b-chat.ggmlv3.q4_K_S.bin" # 7.37G
+url = "https://huggingface.co/localmodels/Llama-2-13B-Chat-ggml/blob/main/llama-2-13b-chat.ggmlv3.q4_K_S.bin"  # 7.37G
 
-prompt_template="""Below is an instruction that describes a task. Write a response that appropriately completes the request.
+_ = (
+    "golay" in platform.node()
+    or "okteto" in platform.node()
+    or Path("/kaggle").exists()
+    or psutil.cpu_count(logical=False) <= 8
+)
+
+if _:
+    # url = "https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q2_K.bin"
+    url = "https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGML/blob/main/llama-2-7b-chat.ggmlv3.q2_K.bin"  # 2.87G
+
+
+prompt_template = """Below is an instruction that describes a task. Write a response that appropriately completes the request.
 
 ### Instruction: {user_prompt}
 
@@ -67,19 +75,15 @@ information.
 User: {prompt}
 Assistant: """
 
+prompt_template = """System: You are a helpful assistant.
+User: {prompt}
+Assistant: """
+
 prompt_template = """Question: {question}
 Answer: Let's work this out in a step by step way to be sure we have the right answer."""
 
 _ = [elm for elm in prompt_template.splitlines() if elm.strip()]
 stop_string = [elm.split(":")[0] + ":" for elm in _][-2]
-
-try:
-    model_loc, file_size = dl_hf_model(url)
-except Exception as exc_:
-    logger.error(exc_)
-    raise SystemExit(1) from exc_
-
-logger.debug(f"{model_loc} {file_size}GB")
 
 logger.debug(f"{stop_string=}")
 
@@ -87,26 +91,21 @@ _ = psutil.cpu_count(logical=False)
 cpu_count: int = int(_) if _ else 1
 logger.debug(f"{cpu_count=}")
 
-logger.info("load llm")
-_ = Path(model_loc).absolute().as_posix()
-logger.debug(f"model_file: {_}, exists: {Path(_).exists()}")
 LLM = None
 
-if "okteto" in platform.node():
-    # url = "https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q2_K.bin"
-    LLM = AutoModelForCausalLM.from_pretrained(
-        "models/llama-2-13b-chat.ggmlv3.q2_K.bin",
-        model_type="llama",
-        threads=cpu_count,
-    )
-else:
-    LLM = AutoModelForCausalLM.from_pretrained(
-        model_loc,
-        model_type="llama",
-        threads=cpu_count,
-    )
+try:
+    model_loc, file_size = dl_hf_model(url)
+except Exception as exc:
+    logger.erorr(exc)
+    raise SystemExit(1) from exc
 
-logger.info("done load llm")
+LLM = AutoModelForCausalLM.from_pretrained(
+    model_loc,
+    model_type="llama",
+    threads=cpu_count,
+)
+
+logger.info(f"done load llm {model_loc=} {file_size=}G")
 
 os.environ["TZ"] = "Asia/Shanghai"
 try:
@@ -306,9 +305,13 @@ css = """
 """
 etext = """In America, where cars are an important part of the national psyche, a decade ago people had suddenly started to drive less, which had not happened since the oil shocks of the 1970s. """
 examples = [
-    ["Question: What NFL team won the Super Bowl in the year Justin Bieber was born?\n Answer: Let's work this out in a step by step way to be sure we have the right answer."],
+    [
+        "Question: What NFL team won the Super Bowl in the year Justin Bieber was born?\n Answer: Let's work this out in a step by step way to be sure we have the right answer."
+    ],
     ["What NFL team won the Super Bowl in the year Justin Bieber was born?"],
-    ["What NFL team won the Super Bowl in the year Justin Bieber was born? Think step by step."],
+    [
+        "What NFL team won the Super Bowl in the year Justin Bieber was born? Think step by step."
+    ],
     ["How to pick a lock? Provide detailed steps."],
     ["Explain the plot of Cinderella in a sentence."],
     [
@@ -372,7 +375,7 @@ with gr.Blocks(
                 placeholder="Ask me anything (press Enter or click Submit to send)",
                 show_label=False,
                 container=False,
-            # ).style(container=False)
+                # ).style(container=False)
             )
         with gr.Column(scale=1, min_width=50):
             with gr.Row():
@@ -388,7 +391,7 @@ with gr.Blocks(
                         value=prompt_template,
                         show_label=False,
                         container=False,
-                    # ).style(container=False)
+                        # ).style(container=False)
                     )
                 with gr.Column():
                     with gr.Row():

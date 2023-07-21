@@ -1,5 +1,5 @@
 ---
-title: llama-2-13b-ggml
+title: llama-2-7b-or-13b-ggml
 emoji: 🚀
 colorFrom: green
 colorTo: green
