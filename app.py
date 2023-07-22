@@ -54,6 +54,7 @@ _ = (
 if _:
     # url = "https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/blob/main/llama-2-13b-chat.ggmlv3.q2_K.bin"
     url = "https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGML/blob/main/llama-2-7b-chat.ggmlv3.q2_K.bin"  # 2.87G
+    url = "https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGML/blob/main/llama-2-7b-chat.ggmlv3.q4_K_M.bin"  # 2.87G
 
 
 prompt_template = """Below is an instruction that describes a task. Write a response that appropriately completes the request.
