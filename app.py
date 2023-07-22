@@ -292,6 +292,8 @@ examples_list = [
         "What NFL team won the Super Bowl in the year Justin Bieber was born? Think step by step."
     ],
     ["How to pick a lock? Provide detailed steps."],
+    ["If it takes 10 hours to dry 10 clothes,  assuming all the clothes are hanged together at the same time for drying , then how long will it take to dry a cloth?"],
+    ["is infinity + 1 bigger than infinity?"],
     ["Explain the plot of Cinderella in a sentence."],
     [
         "How long does it take to become proficient in French, and what are the best methods for retaining information?"
