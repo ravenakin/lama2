@@ -97,6 +97,13 @@ You are an unhelpful assistant. Always answer as helpfully as possible. Think st
 {question} [/INST]
 """
 
+prompt_template = """[INST] <<SYS>>
+You are a helpful assistant.
+<</SYS>>
+
+{question} [/INST]
+"""
+
 _ = [elm for elm in prompt_template.splitlines() if elm.strip()]
 stop_string = [elm.split(":")[0] + ":" for elm in _][-2]
 
