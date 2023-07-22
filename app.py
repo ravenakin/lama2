@@ -218,7 +218,7 @@ def bot(history):
                 print(prefix, end="", flush=True)
                 logger.debug(f"{prefix=}")
             print(elm, end="", flush=True)
-            logger.debug(f"{elm=}")
+            # logger.debug(f"{elm=}")
 
             response.append(elm)
             history[-1][1] = prefix + "".join(response)
@@ -283,9 +283,6 @@ css = """
 """
 etext = """In America, where cars are an important part of the national psyche, a decade ago people had suddenly started to drive less, which had not happened since the oil shocks of the 1970s. """
 examples_list = [
-    [
-        "Question: What NFL team won the Super Bowl in the year Justin Bieber was born?\n Answer: Let's work this out in a step by step way to be sure we have the right answer."
-    ],
     ["What NFL team won the Super Bowl in the year Justin Bieber was born?"],
     [
         "What NFL team won the Super Bowl in the year Justin Bieber was born? Think step by step."
@@ -349,7 +346,7 @@ with gr.Blocks(
         with gr.Column(scale=5):
             msg = gr.Textbox(
                 label="Chat Message Box",
-                placeholder="Ask me anything (press Enter or click Submit to send)",
+                placeholder="Ask me anything (press Shift+Enter or click Submit to send)",
                 show_label=False,
                 # container=False,
                 lines=6,
@@ -448,7 +445,7 @@ else:
     # concurrency_count = max(int(16 / file_size) - 1, 1)
 # """
 
-concurrency_count = 1
+concurrency_count = 2
 logger.info(f"{concurrency_count=}")
 
 block.queue(concurrency_count=concurrency_count, max_size=5).launch(debug=True)
