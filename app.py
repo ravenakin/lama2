@@ -218,7 +218,7 @@ def bot(history):
                 print(prefix, end="", flush=True)
                 logger.debug(f"{prefix=}")
             print(elm, end="", flush=True)
-            # logger.debug(f"{elm=}")
+            # logger.debug(f"{elm}")
 
             response.append(elm)
             history[-1][1] = prefix + "".join(response)
@@ -445,7 +445,7 @@ else:
     # concurrency_count = max(int(16 / file_size) - 1, 1)
 # """
 
-concurrency_count = 2
+concurrency_count = 1
 logger.info(f"{concurrency_count=}")
 
 block.queue(concurrency_count=concurrency_count, max_size=5).launch(debug=True)
