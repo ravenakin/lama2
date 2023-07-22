@@ -47,7 +47,8 @@ _ = (
     "golay" in platform.node()
     or "okteto" in platform.node()
     or Path("/kaggle").exists()
-    or psutil.cpu_count(logical=False) < 4
+    # or psutil.cpu_count(logical=False) < 4
+    or 1  # run 7b in hf
 )
 
 if _:
@@ -116,7 +117,7 @@ except Exception as exc_:
 LLM = AutoModelForCausalLM.from_pretrained(
     model_loc,
     model_type="llama",
-    threads=cpu_count,
+    # threads=cpu_count,
 )
 
 logger.info(f"done load llm {model_loc=} {file_size=}G")
@@ -145,7 +146,7 @@ class GenerationConfig:
     seed: int = 42
     reset: bool = False
     stream: bool = True
-    threads: int = cpu_count
+    # threads: int = cpu_count
     # stop: list[str] = field(default_factory=lambda: [stop_string])
 
 
@@ -237,7 +238,7 @@ def predict_api(prompt):
             seed=42,
             reset=True,  # reset history (cache)
             stream=False,
-            threads=cpu_count,
+            # threads=cpu_count,
             # stop=prompt_prefix[1:2],
         )
 
@@ -392,18 +393,18 @@ with gr.Blocks(
         fn=user,
         inputs=[msg, chatbot],
         outputs=[msg, chatbot],
-        queue=False,
+        queue=True,
         show_progress="full",
-        api_name=False,
+        api_name=None,
     ).then(bot, chatbot, chatbot, queue=False)
     submit.click(
         fn=lambda x, y: ("",) + user(x, y)[1:],  # clear msg
         inputs=[msg, chatbot],
         outputs=[msg, chatbot],
-        # queue=True,
-        queue=False,
+        queue=True,
+        # queue=False,
         show_progress="full",
-        api_name=False,
+        api_name=None,
     ).then(bot, chatbot, chatbot, queue=False)
 
     clear.click(lambda: None, None, chatbot, queue=False)
@@ -429,13 +430,16 @@ with gr.Blocks(
 # CPU UPGRADE cpu_count=8 32G, model 7G
 
 # does not work
+_ = """
 # _ = int(psutil.virtual_memory().total / 10**9 // file_size - 1)
 # concurrency_count = max(_, 1)
-
-if psutil.cpu_count(logical=False) > 8:
-    concurrency_count = max(int(32 / file_size) - 1, 1)
+if psutil.cpu_count(logical=False) >= 8:
+    # concurrency_count = max(int(32 / file_size) - 1, 1)
 else:
-    concurrency_count = max(int(16 / file_size) - 1, 1)
+    # concurrency_count = max(int(16 / file_size) - 1, 1)
+# """
+
+concurrency_count = 1
 logger.info(f"{concurrency_count=}")
 
-block.queue(concurrency_count=1, max_size=5).launch(debug=True)
+block.queue(concurrency_count=concurrency_count, max_size=5).launch(debug=True)
