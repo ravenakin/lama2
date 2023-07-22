@@ -7,8 +7,8 @@ import random
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from types import SimpleNamespace
 
+# from types import SimpleNamespace
 import gradio as gr
 import psutil
 from about_time import about_time
@@ -101,7 +101,7 @@ stop_string = [elm.split(":")[0] + ":" for elm in _][-2]
 
 logger.debug(f"{stop_string=}")
 
-_ = psutil.cpu_count(logical=False)
+_ = psutil.cpu_count(logical=False) - 1
 cpu_count: int = int(_) if _ else 1
 logger.debug(f"{cpu_count=}")
 
@@ -128,11 +128,12 @@ except Exception:
     # Windows
     logger.warning("Windows, cant run time.tzset()")
 
+_ = """
 ns = SimpleNamespace(
     response="",
     generator=(_ for _ in []),
 )
-
+# """
 
 @dataclass
 class GenerationConfig:
@@ -181,7 +182,6 @@ def bot_(history):
     history[-1][1] = ""
     for character in bot_message:
         history[-1][1] += character
-        ns.buff = history[-1][1]
         time.sleep(0.02)
         yield history
 
@@ -217,7 +217,7 @@ def bot(history):
 
     _ = (
         f"(time elapsed: {atime.duration_human}, "  # type: ignore
-        f"{atime.duration/len(''.join(response)):.1f}s/char)"  # type: ignore
+        f"{atime.duration/len(''.join(response)):.2f}s/char)"  # type: ignore
     )
 
     history[-1][1] = "".join(response)  + f"\n{_}"
