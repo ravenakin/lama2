@@ -47,7 +47,7 @@ _ = (
     "golay" in platform.node()
     or "okteto" in platform.node()
     or Path("/kaggle").exists()
-    or psutil.cpu_count(logical=False) <= 4
+    or psutil.cpu_count(logical=False) < 4
 )
 
 if _:
