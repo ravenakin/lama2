@@ -394,7 +394,8 @@ with gr.Blocks(
         outputs=[msg, chatbot],
         queue=False,
         show_progress="full",
-    ).then(bot, chatbot, chatbot, queue=True)
+        api_name=False,
+    ).then(bot, chatbot, chatbot, queue=False)
     submit.click(
         fn=lambda x, y: ("",) + user(x, y)[1:],  # clear msg
         inputs=[msg, chatbot],
@@ -402,7 +403,8 @@ with gr.Blocks(
         # queue=True,
         queue=False,
         show_progress="full",
-    ).then(bot, chatbot, chatbot, queue=True)
+        api_name=False,
+    ).then(bot, chatbot, chatbot, queue=False)
 
     clear.click(lambda: None, None, chatbot, queue=False)
 
