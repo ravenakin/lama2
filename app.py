@@ -173,13 +173,13 @@ logger.debug(f"{asdict(GenerationConfig())=}")
 def user(user_message, history):
     # return user_message, history + [[user_message, None]]
     history.append([user_message, None])
-    return user_message, history
+    return user_message, history  # keep user_message
 
 
 def user1(user_message, history):
     # return user_message, history + [[user_message, None]]
     history.append([user_message, None])
-    return "", history
+    return "", history  # clear user_message
 
 
 def bot_(history):
@@ -237,9 +237,9 @@ def predict_api(prompt):
     logger.debug(f"{prompt=}")
     try:
         # user_prompt = prompt
-        _ = GenerationConfig(
+        config = GenerationConfig(
             temperature=0.2,
-            top_k=0,
+            top_k=10,
             top_p=0.9,
             repetition_penalty=1.0,
             max_new_tokens=512,  # adjust as needed
@@ -250,16 +250,12 @@ def predict_api(prompt):
             # stop=prompt_prefix[1:2],
         )
 
-        generator = generate(
+        response = generate(
             prompt,
+            config=config,
         )
 
-        response = ""
-        for word in generator:
-            print(word, end="", flush=True)
-            response += word
-        print("")
-        logger.debug(f"{response=}")
+        logger.debug(f"api: {response=}")
     except Exception as exc:
         logger.error(exc)
         response = f"{exc=}"
@@ -419,11 +415,11 @@ with gr.Blocks(
         input_text = gr.Text()
         api_btn = gr.Button("Go", variant="primary")
         out_text = gr.Text()
+
     api_btn.click(
         predict_api,
         input_text,
         out_text,
-        # show_progress="full",
         api_name="api",
     )
 
