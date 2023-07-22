@@ -176,6 +176,12 @@ def user(user_message, history):
     return user_message, history
 
 
+def user1(user_message, history):
+    # return user_message, history + [[user_message, None]]
+    history.append([user_message, None])
+    return "", history
+
+
 def bot_(history):
     user_message = history[-1][0]
     resp = random.choice(["How are you?", "I love you", "I'm very hungry"])
@@ -210,7 +216,9 @@ def bot(history):
                 prefix = f"({time.time() - then:.2f}s) "
                 flag = 0
                 print(prefix, end="", flush=True)
+                logger.debug(f"{prefix=}")
             print(elm, end="", flush=True)
+            logger.debug(f"{elm=}")
 
             response.append(elm)
             history[-1][1] = prefix + "".join(response)
@@ -398,7 +406,8 @@ with gr.Blocks(
         api_name=None,
     ).then(bot, chatbot, chatbot, queue=False)
     submit.click(
-        fn=lambda x, y: ("",) + user(x, y)[1:],  # clear msg
+        # fn=lambda x, y: ("",) + user(x, y)[1:],  # clear msg
+        fn=user1,  # clear msg
         inputs=[msg, chatbot],
         outputs=[msg, chatbot],
         queue=True,
