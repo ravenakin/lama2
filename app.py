@@ -363,7 +363,7 @@ with gr.Blocks(
         with gr.Column(scale=1, min_width=50):
             with gr.Row():
                 submit = gr.Button("Submit", elem_classes="xsmall")
-                stop = gr.Button("Stop", visible=False)
+                stop = gr.Button("Stop", visible=True)
                 clear = gr.Button("Clear History", visible=True)
     with gr.Row(visible=False):
         with gr.Accordion("Advanced Options:", open=False):
@@ -399,7 +399,7 @@ with gr.Blocks(
             elem_classes=["disclaimer"],
         )
 
-    msg.submit(
+    msg_submit_event = msg.submit(
         # fn=conversation.user_turn,
         fn=user,
         inputs=[msg, chatbot],
@@ -408,7 +408,7 @@ with gr.Blocks(
         show_progress="full",
         # api_name=None,
     ).then(bot, chatbot, chatbot, queue=True)
-    submit.click(
+    submit_click_event = submit.click(
         # fn=lambda x, y: ("",) + user(x, y)[1:],  # clear msg
         fn=user1,  # clear msg
         inputs=[msg, chatbot],
@@ -418,7 +418,13 @@ with gr.Blocks(
         show_progress="full",
         # api_name=None,
     ).then(bot, chatbot, chatbot, queue=True)
-
+    stop.click(
+        fn=None,
+        inputs=None,
+        outputs=None,
+        cancels=[msg_submit_event, submit_click_event],
+        queue=False,
+    )
     clear.click(lambda: None, None, chatbot, queue=False)
 
     with gr.Accordion("For Chat/Translation API", open=False, visible=False):
