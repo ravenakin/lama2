@@ -1,6 +1,7 @@
 """Run codes."""
 # pylint: disable=line-too-long, broad-exception-caught, invalid-name, missing-function-docstring, too-many-instance-attributes, missing-class-docstring
 # ruff: noqa: E501
+import gc
 import os
 import platform
 import random
@@ -115,6 +116,7 @@ cpu_count: int = int(_) if _ else 1
 logger.debug(f"{cpu_count=}")
 
 LLM = None
+gc.collect()
 
 try:
     model_loc, file_size = dl_hf_model(url)
@@ -292,7 +294,7 @@ examples_list = [
         "What NFL team won the Super Bowl in the year Justin Bieber was born? Think step by step."
     ],
     ["How to pick a lock? Provide detailed steps."],
-    ["If it takes 10 hours to dry 10 clothes,  assuming all the clothes are hanged together at the same time for drying , then how long will it take to dry a cloth?"],
+    ["If it takes 10 hours to dry 10 clothes,  assuming all the clothes are hung together at the same time for drying , then how long will it take to dry a cloth?"],
     ["is infinity + 1 bigger than infinity?"],
     ["Explain the plot of Cinderella in a sentence."],
     [
